@@ -6,7 +6,6 @@ extern "C" {
 #endif
 
 #include <ruby.h>
-#include "missing.h"
 
 // Ooura's FFT Thread Use Setting
 #if defined(HAVE_CREATETHREAD) && \

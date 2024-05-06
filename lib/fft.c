@@ -1,8 +1,9 @@
 /*******************************************************************************
-	dsp_fft.c -- FFT
+	fft.c -- FFT
 *******************************************************************************/
 #include <ruby.h>
 #include "abi.h"
+#include "missing.h"
 
 // 初期設定: エントリポイント
 static void InitVM_FFTMain(void);
@@ -35,7 +36,7 @@ fft_cdft_inline(VALUE ary, int invertible)
 	{
 		VALUE elem = rb_ary_entry(ary, i);
 		if (TYPE(elem) != T_COMPLEX)
-			elem = rb_Complex(elem);
+			elem = rb_Complex1(elem);
 		const double real = NUM2DBL(rb_complex_real(elem));
 		const double imag = NUM2DBL(rb_complex_imag(elem));
 		a[2*i] = real;
