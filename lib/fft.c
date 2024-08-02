@@ -2,10 +2,10 @@
 	fft.c -- FFT
 *******************************************************************************/
 #include <ruby.h>
+#include "ruby/fft/globals.h"
 #include "abi.h"
 #include "missing.h"
 
-// 初期設定: エントリポイント
 static void InitVM_FFTMain(void);
 void
 InitVM_FFT(void)
@@ -13,457 +13,184 @@ InitVM_FFT(void)
 	InitVM(FFTMain);
 }
 
-static VALUE
-fft_cdft_inline(VALUE ary, int invertible)
+int
+opts_inversion_p(VALUE opts)
 {
-	VALUE retval;
-	long sz = RARRAY_LEN(ary);
-	int *ip;
-	double *a, *w;
-	
-	if ((INT_MAX / 2) < sz)
-		rb_raise(rb_eRangeError, "biggest array size");
-	else if (sz < 1)
-		rb_raise(rb_eRangeError, "unavailable array size (n >= 1, was %ld)", sz);
-	else if (!ispow2l(sz))
-		rb_raise(rb_eRangeError, "size must be 2^m");
-	
-	a = ALLOC_N(double, sz*2);
-	ip = ALLOC_N(int, (int)(2+sqrt(sz)));
-	w = ALLOC_N(double, sz/2);
-	
-	for (volatile long i = 0; i < sz; i++)
-	{
-		VALUE elem = rb_ary_entry(ary, i);
-		if (TYPE(elem) != T_COMPLEX)
-			elem = rb_Complex1(elem);
-		const double real = NUM2DBL(rb_complex_real(elem));
-		const double imag = NUM2DBL(rb_complex_imag(elem));
-		a[2*i] = real;
-		a[2*i+1] = imag;
-	}
-	
-	ip[0] = 0;
-	
-	cdft(2*sz, invertible, a, ip, w);
-	
-	retval = rb_ary_new2(sz);
-	
-	for (volatile long i = 0; i < sz; i++)
-	{
-		rb_ary_store(retval, i, rb_dbl_complex_new(a[2*i], a[2*i+1]));
-	}
-	
-	xfree(a);
-	xfree(ip);
-	xfree(w);
-	
-	return retval;
+    static ID kwds[1];
+    VALUE inversion;
+    if (!kwds[0]) {
+        kwds[0] = rb_intern_const("inversion");
+    }
+    rb_get_kwargs(opts, kwds, 0, 1, &inversion);
+    switch (inversion) {
+      case Qtrue: case Qfalse:
+        break;
+      case Qundef:
+        return 0;
+      default:
+        rb_raise(rb_eArgError, "true or false is expected as inversion: %+"PRIsVALUE,
+                 inversion);
+    }
+
+    return inversion == Qtrue;
 }
 
+static VALUE
+fft_callback(int argc, VALUE *argv, VALUE (*callback_func)(VALUE, int))
+{
+	VALUE ary, opts = Qnil;
+	rb_scan_args(argc, argv, "11", &ary, &opts);
+	int invertible = opts_inversion_p(opts) ? -1 : 1;
+
+	if (TYPE(ary) != T_ARRAY)
+		rb_raise(rb_eTypeError, "not an Array");
+
+	return callback_func(ary, invertible);
+}
+
+
+#include "internal/solver/fft/cdft.h" // fft_cdft_inline()
 /*
  *  call-seq:
  *    FFT.cdft(ary) -> [*Complex]
- *    FFT.cdft(ary, inverse: true) -> [*Complex]
+ *    FFT.cdft(ary, inversion: true) -> [*Complex]
  *  
- *  引数aryを複素数列とみなし，離散フーリエ変換を行う．
+ *  Treats the argument ary as a sequence of complex numbers, and performs the FFT.
  *  
- *  @ary     ... 配列クラスを指定する．要素は全てComplexクラスであるとみなされる．
- *               そうでない要素があった場合，暗黙の型変換を行う．
- *  @inverse ... キーワード引数．ブーリアンである．デフォルトはfalse．
- *               trueにすると逆FFTにスイッチする．
- *  retval   ... 複素数列のArray
+ *  Function type          : Complex Discrete Fourier Transform
+ *  Array size requirement : n >= 1, n = power of 2
+ *  
+ *  @ary       ... Specifies the array Class. All elements are assumed to be of class Complex.
+ *                 If there is an element that is not the case, an implicit type conversion is performed.
+ *  @inversion ... Keyword argument. Boolean. Defaults to false.
+ *                 Setting it to true will switch to inverse FFT.
+ *  retval     ... Sequence of the complex numbers
  */
 static VALUE
 fft_cdft(int argc, VALUE *argv, VALUE unused_obj)
 {
-	VALUE ary, inverse;
-	int invertible = 1;
-	rb_scan_args(argc, argv, "11", &ary, &inverse);
-	
-	if (TYPE(inverse) == T_HASH && RTEST(rb_hash_lookup2(inverse, MAKE_SYM("inverse"), Qnil)))
-		invertible = -1;
-	
-	if (TYPE(ary) != T_ARRAY)
-		rb_raise(rb_eArgError, "not an Array");
-
-	return fft_cdft_inline(ary, invertible);
+	return fft_callback(argc, argv, fft_cdft_inline);
 }
 
 
-static VALUE
-fft_rdft_inline(VALUE ary, int invertible)
-{
-	VALUE retval;
-	long sz = RARRAY_LEN(ary);
-	int *ip;
-	double *a, *w;
-	
-	if (INT_MAX < sz)
-		rb_raise(rb_eRangeError, "biggest array size");
-	else if (sz < 2)
-		rb_raise(rb_eRangeError, "unavailable array size (n >= 2, was %ld)", sz);
-	else if (!ispow2l(sz))
-		rb_raise(rb_eRangeError, "size must be 2^m");
-	
-	a = ALLOC_N(double, sz);
-	ip = ALLOC_N(int, (int)(2+sqrt(sz/2)));
-	w = ALLOC_N(double, sz/2);
-	
-	for (volatile long i = 0; i < sz; i++)
-	{
-		VALUE elem = rb_ary_entry(ary, i);
-		a[i] = NUM2DBL(elem);
-	}
-	
-	ip[0] = 0;
-	
-	rdft(sz, invertible, a, ip, w);
-	
-	retval = rb_ary_new2(sz);
-	
-	for (volatile long i = 0; i < sz; i++)
-	{
-		rb_ary_store(retval, i, DBL2NUM(a[i]));
-	}
-	
-	xfree(a);
-	xfree(ip);
-	xfree(w);
-	
-	return retval;
-}
-
+#include "internal/solver/fft/rdft.h" // fft_rdft_inline()
 /*
  *  call-seq:
  *    FFT.rdft(ary) -> [*Float]
- *    FFT.rdft(ary, inverse: true) -> [*Float]
+ *    FFT.rdft(ary, inversion: true) -> [*Float]
  *  
- *  引数aryを実数数列とみなし，離散フーリエ変換を行う．
+ *  Treats the argument ary as a sequence of real numbers, and performs the FFT.
  *  
- *  @ary     ... 配列クラスを指定する．要素は全てFloatクラスであるとみなされる．
- *               そうでない要素があった場合，暗黙の型変換を行う．
- *  @inverse ... キーワード引数．ブーリアンである．デフォルトはfalse．
- *               trueにすると逆FFTにスイッチする．
- *  retval   ... 実数数列のArray
+ *  Function type          : Real Discrete Fourier Transform
+ *  Array size requirement : n >= 2, n = power of 2
+ *  
+ *  @ary       ... Specifies the array Class. All elements are assumed to be of class Float.
+ *                 If there is an element that is not the case, an implicit type conversion is performed.
+ *  @inversion ... Keyword argument. Boolean. Defaults to false.
+ *                 Setting it to true will switch to inverse FFT.
+ *  retval     ... Sequence of the real numbers
  */
 static VALUE
 fft_rdft(int argc, VALUE *argv, VALUE unused_obj)
 {
-	VALUE ary, inverse;
-	int invertible = 1;
-	rb_scan_args(argc, argv, "11", &ary, &inverse);
-	
-	if (TYPE(inverse) == T_HASH && RTEST(rb_hash_lookup2(inverse, MAKE_SYM("inverse"), Qnil)))
-		invertible = -1;
-	
-	if (TYPE(ary) != T_ARRAY)
-		rb_raise(rb_eArgError, "not an Array");
-
-	return fft_rdft_inline(ary, invertible);
+	return fft_callback(argc, argv, fft_rdft_inline);
 }
 
-static VALUE
-fft_ddct_inline(VALUE ary, int invertible)
-{
-	VALUE retval;
-	long sz = RARRAY_LEN(ary);
-	int *ip;
-	double *a, *w;
-	
-	if (INT_MAX < sz)
-		rb_raise(rb_eRangeError, "biggest array size");
-	else if (sz < 2)
-		rb_raise(rb_eRangeError, "unavailable array size (n >= 2, was %ld)", sz);
-	else if (!ispow2l(sz))
-		rb_raise(rb_eRangeError, "size must be 2^m");
-	
-	a = ALLOC_N(double, sz);
-	ip = ALLOC_N(int, (int)(2+sqrt(sz/2)));
-	w = ALLOC_N(double, sz*5/4);
-	
-	for (volatile long i = 0; i < sz; i++)
-	{
-		VALUE elem = rb_ary_entry(ary, i);
-		a[i] = NUM2DBL(elem);
-	}
-	
-	ip[0] = 0;
-	
-	ddct(sz, invertible, a, ip, w);
-	
-	retval = rb_ary_new2(sz);
-	
-	for (volatile long i = 0; i < sz; i++)
-	{
-		rb_ary_store(retval, i, DBL2NUM(a[i]));
-	}
-	
-	xfree(a);
-	xfree(ip);
-	xfree(w);
-	
-	return retval;
-}
 
+#include "internal/solver/fft/ddct.h" // fft_ddct_inline()
 /*
  *  call-seq:
  *    FFT.ddct(ary) -> [*Float]
- *    FFT.ddct(ary, inverse: true) -> [*Float]
+ *    FFT.ddct(ary, inversion: true) -> [*Float]
  *  
- *  引数aryを実数数列とみなし，離散余弦変換を行う．
+ *  Treats the argument ary as a sequence of real numbers, and performs the FFT.
  *  
- *  @ary     ... 配列クラスを指定する．要素は全てFloatクラスであるとみなされる．
- *               そうでない要素があった場合，暗黙の型変換を行う．
- *  @inverse ... キーワード引数．ブーリアンである．デフォルトはfalse．
- *               trueにすると逆FFTにスイッチする．
- *  retval   ... 実数数列のArray
+ *  Function type          : Discrete Cosine Transform
+ *  Array size requirement : n >= 2, n = power of 2
+ *  
+ *  @ary       ... Specifies the array Class. All elements are assumed to be of class Float.
+ *                 If there is an element that is not the case, an implicit type conversion is performed.
+ *  @inversion ... Keyword argument. Boolean. Defaults to false.
+ *                 Setting it to true will switch to inverse FFT.
+ *  retval     ... Sequence of the real numbers
  */
 static VALUE
 fft_ddct(int argc, VALUE *argv, VALUE unused_obj)
 {
-	VALUE ary, inverse;
-	int invertible = 1;
-	rb_scan_args(argc, argv, "11", &ary, &inverse);
-	
-	if (TYPE(inverse) == T_HASH && RTEST(rb_hash_lookup2(inverse, MAKE_SYM("inverse"), Qnil)))
-		invertible = -1;
-	
-	if (TYPE(ary) != T_ARRAY)
-		rb_raise(rb_eArgError, "not an Array");
-
-	return fft_ddct_inline(ary, invertible);
+	return fft_callback(argc, argv, fft_ddct_inline);
 }
 
-static VALUE
-fft_ddst_inline(VALUE ary, int invertible)
-{
-	VALUE retval;
-	long sz = RARRAY_LEN(ary);
-	int *ip;
-	double *a, *w;
-	
-	if (INT_MAX < sz)
-		rb_raise(rb_eRangeError, "biggest array size");
-	else if (sz < 2)
-		rb_raise(rb_eRangeError, "unavailable array size (n >= 2, was %ld)", sz);
-	else if (!ispow2l(sz))
-		rb_raise(rb_eRangeError, "size must be 2^m");
-	
-	a = ALLOC_N(double, sz);
-	ip = ALLOC_N(int, (int)(2+sqrt(sz/2)));
-	w = ALLOC_N(double, sz*5/4);
-	
-	for (volatile long i = 0; i < sz; i++)
-	{
-		VALUE elem = rb_ary_entry(ary, i);
-		a[i] = NUM2DBL(elem);
-	}
-	
-	ip[0] = 0;
-	
-	ddst(sz, invertible, a, ip, w);
-	
-	retval = rb_ary_new2(sz);
-	
-	for (volatile long i = 0; i < sz; i++)
-	{
-		rb_ary_store(retval, i, DBL2NUM(a[i]));
-	}
-	
-	xfree(a);
-	xfree(ip);
-	xfree(w);
-	
-	return retval;
-}
 
+#include "internal/solver/fft/ddst.h" // fft_ddst_inline()
 /*
  *  call-seq:
  *    FFT.ddst(ary) -> [*Float]
- *    FFT.ddst(ary, inverse: true) -> [*Float]
+ *    FFT.ddst(ary, inversion: true) -> [*Float]
  *  
- *  引数aryを実数数列とみなし，離散正弦変換を行う．
+ *  Treats the argument ary as a sequence of real numbers, and performs the FFT.
  *  
- *  @ary     ... 配列クラスを指定する．要素は全てFloatクラスであるとみなされる．
- *               そうでない要素があった場合，暗黙の型変換を行う．
- *  @inverse ... キーワード引数．ブーリアンである．デフォルトはfalse．
- *               trueにすると逆FFTにスイッチする．
- *  retval   ... 実数数列のArray
+ *  Function type          : Discrete Sine Transform
+ *  Array size requirement : n >= 2, n = power of 2
+ *  
+ *  @ary       ... Specifies the array Class. All elements are assumed to be of class Float.
+ *                 If there is an element that is not the case, an implicit type conversion is performed.
+ *  @inversion ... Keyword argument. Boolean. Defaults to false.
+ *                 Setting it to true will switch to inverse FFT.
+ *  retval     ... Sequence of the real numbers
  */
 static VALUE
 fft_ddst(int argc, VALUE *argv, VALUE unused_obj)
 {
-	VALUE ary, inverse;
-	int invertible = 1;
-	rb_scan_args(argc, argv, "11", &ary, &inverse);
-	
-	if (TYPE(inverse) == T_HASH && RTEST(rb_hash_lookup2(inverse, MAKE_SYM("inverse"), Qnil)))
-		invertible = -1;
-	
-	if (TYPE(ary) != T_ARRAY)
-		rb_raise(rb_eArgError, "not an Array");
-
-	return fft_ddst_inline(ary, invertible);
+	return fft_callback(argc, argv, fft_ddst_inline);
 }
 
 
-static VALUE
-fft_dfct_inline(VALUE ary, int invertible)
-{
-	VALUE retval;
-	long sz = RARRAY_LEN(ary), n = sz - 1;
-	int *ip;
-	double *a, *w, *t;
-	
-	if (INT_MAX < n)
-		rb_raise(rb_eRangeError, "biggest array size");
-	else if (n < 2)
-		rb_raise(rb_eRangeError, "unavailable array size (n >= 2, was %ld)", sz);
-	else if (!ispow2l(n))
-		rb_raise(rb_eRangeError, "size must be 2^m+1");
-	
-	a = ALLOC_N(double, sz);
-	ip = ALLOC_N(int, (int)(2+sqrt(n/4)));
-	t = ALLOC_N(double, n/2+1);
-	w = ALLOC_N(double, sz*5/8);
-	
-	for (volatile long i = 0; i < sz; i++)
-	{
-		VALUE elem = rb_ary_entry(ary, i);
-		if (invertible == -1)
-			a[i] = NUM2DBL(elem) * 0.5;
-		else
-			a[i] = NUM2DBL(elem);
-	}
-	
-	ip[0] = 0;
-	
-	dfct(n, a, t, ip, w);
-	
-	retval = rb_ary_new2(sz);
-	
-	for (volatile long i = 0; i < sz; i++)
-	{
-		if (invertible == -1)
-			rb_ary_store(retval, i, DBL2NUM(a[i] * 2.0 / n));
-		else
-			rb_ary_store(retval, i, DBL2NUM(a[i]));
-	}
-	
-	xfree(a);
-	xfree(ip);
-	xfree(t);
-	xfree(w);
-	
-	return retval;
-}
-
+#include "internal/solver/fft/dfct.h" // fft_dfct_inline()
 /*
  *  call-seq:
  *    FFT.dfct(ary) -> [*Float]
- *    FFT.dfct(ary, inverse: true) -> [*Float]
+ *    FFT.dfct(ary, inversion: true) -> [*Float]
  *  
- *  引数aryを実数数列とみなし，実数離散フーリエ変換の余弦変換(実数対称離散フーリエ変換)を行う．
+ *  Treats the argument ary as a sequence of real numbers, and performs the FFT.
  *  
- *  @ary     ... 配列クラスを指定する．要素は全てFloatクラスであるとみなされる．
- *               そうでない要素があった場合，暗黙の型変換を行う．
- *  @inverse ... キーワード引数．ブーリアンである．デフォルトはfalse．
- *               trueにすると逆FFTにスイッチする．
- *  retval   ... 実数数列のArray
+ *  Function type          : Cosine Transform of RDFT (Real Symmetric DFT)
+ *  Array size requirement : n >= 2, n = power of 2
+ *  
+ *  @ary       ... Specifies the array Class. All elements are assumed to be of class Float.
+ *                 If there is an element that is not the case, an implicit type conversion is performed.
+ *  @inversion ... Keyword argument. Boolean. Defaults to false.
+ *                 Setting it to true will switch to inverse FFT.
+ *  retval     ... Sequence of the real numbers
  */
 static VALUE
 fft_dfct(int argc, VALUE *argv, VALUE unused_obj)
 {
-	VALUE ary, inverse;
-	int invertible = 1;
-	rb_scan_args(argc, argv, "11", &ary, &inverse);
-	
-	if (TYPE(inverse) == T_HASH && RTEST(rb_hash_lookup2(inverse, MAKE_SYM("inverse"), Qnil)))
-		invertible = -1;
-	
-	if (TYPE(ary) != T_ARRAY)
-		rb_raise(rb_eArgError, "not an Array");
-
-	return fft_dfct_inline(ary, invertible);
+	return fft_callback(argc, argv, fft_dfct_inline);
 }
 
 
-static VALUE
-fft_dfst_inline(VALUE ary, int invertible)
-{
-	VALUE retval;
-	long sz = RARRAY_LEN(ary), n = sz + 1;
-	int *ip;
-	double *a, *w, *t;
-	
-	if (INT_MAX < n)
-		rb_raise(rb_eRangeError, "biggest array size");
-	else if (n < 2)
-		rb_raise(rb_eRangeError, "unavailable array size (n >= 2, was %ld)", sz);
-	else if (!ispow2l(n))
-		rb_raise(rb_eRangeError, "size must be 2^m-1");
-	
-	a = ALLOC_N(double, sz);
-	ip = ALLOC_N(int, (int)(2+sqrt(n/4)));
-	t = ALLOC_N(double, n/2);
-	w = ALLOC_N(double, sz*5/8);
-	
-	for (volatile long i = 0; i < sz; i++)
-	{
-		VALUE elem = rb_ary_entry(ary, i);
-		a[i] = NUM2DBL(elem);
-	}
-	
-	ip[0] = 0;
-	
-	dfst(n, a, t, ip, w);
-	
-	retval = rb_ary_new2(sz);
-	
-	for (volatile long i = 0; i < sz; i++)
-	{
-		if (invertible == -1)
-			rb_ary_store(retval, i, DBL2NUM(a[i] * 2.0 / n));
-		else
-			rb_ary_store(retval, i, DBL2NUM(a[i]));
-	}
-	
-	xfree(a);
-	xfree(ip);
-	xfree(t);
-	xfree(w);
-	
-	return retval;
-}
-
+#include "internal/solver/fft/dfst.h" // fft_dfst_inline()
 /*
  *  call-seq:
  *    FFT.dfst(ary) -> [*Float]
- *    FFT.dfst(ary, inverse: true) -> [*Float]
+ *    FFT.dfst(ary, inversion: true) -> [*Float]
  *  
- *  引数aryを実数数列とみなし，実数離散フーリエ変換の正弦変換(実数非対称離散フーリエ変換)を行う．
+ *  Treats the argument ary as a sequence of real numbers, and performs the FFT.
  *  
- *  @ary     ... 配列クラスを指定する．要素は全てFloatクラスであるとみなされる．
- *               そうでない要素があった場合，暗黙の型変換を行う．
- *  @inverse ... キーワード引数．ブーリアンである．デフォルトはfalse．
- *               trueにすると逆FFTにスイッチする．
- *  retval   ... 実数数列のArray
+ *  Function type: Sine Transform of RDFT (Real Anti-symmetric DFT)
+ *  Array size requirement : n >= 2, n = power of 2
+ *  
+ *  @ary       ... Specifies the array Class. All elements are assumed to be of class Float.
+ *                 If there is an element that is not the case, an implicit type conversion is performed.
+ *  @inversion ... Keyword argument. Boolean. Defaults to false.
+ *                 Setting it to true will switch to inverse FFT.
+ *  retval     ... Sequence of the real numbers
  */
 static VALUE
 fft_dfst(int argc, VALUE *argv, VALUE unused_obj)
 {
-	VALUE ary, inverse;
-	int invertible = 1;
-	rb_scan_args(argc, argv, "11", &ary, &inverse);
-	
-	if (TYPE(inverse) == T_HASH && RTEST(rb_hash_lookup2(inverse, MAKE_SYM("inverse"), Qnil)))
-		invertible = -1;
-	
-	if (TYPE(ary) != T_ARRAY)
-		rb_raise(rb_eArgError, "not an Array");
+	return fft_callback(argc, argv, fft_dfst_inline);
 
-	return fft_dfst_inline(ary, invertible);
 }
 
 static void

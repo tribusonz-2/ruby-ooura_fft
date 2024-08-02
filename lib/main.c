@@ -1,9 +1,13 @@
 /*******************************************************************************
-	main.c -- Entry Point (Initializer)
+	main.c -
+	
+	$author$
 *******************************************************************************/
 #include <ruby.h>
 #define  USE_GLOBAL_VARIABLE
-#include "abi.h"
+#include "ruby/fft/globals.h"
+
+void InitVM_FFT(void);
 
 void
 Init_fft(void)

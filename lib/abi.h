@@ -5,8 +5,6 @@
 extern "C" {
 #endif
 
-#include <ruby.h>
-
 // Ooura's FFT Thread Use Setting
 #if defined(HAVE_CREATETHREAD) && \
     defined(HAVE_WAITFORSINGLEOBJECT) && \
@@ -19,19 +17,9 @@ extern "C" {
 #else
 # define USING_THREAD  NULL
 #endif
+
+#include <ruby.h> // rb_raise(), rb_eThreadError
 #include "abi/fftsg/fftsg.h"
-
-#ifdef     USE_GLOBAL_VARIABLE
-# define   RUBY_EXT_EXTERN
-# define   GLOBAL_VAL(v) = (v)
-#else
-# define   RUBY_EXT_EXTERN    extern
-# define   GLOBAL_VAL(v)
-#endif
-
-RUBY_EXT_EXTERN VALUE rb_mFFT;
-
-#define MAKE_SYM(str)  ID2SYM(rb_intern(str))
 
 #if defined(__cplusplus)
 }
