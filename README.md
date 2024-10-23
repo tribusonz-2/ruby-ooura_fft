@@ -1,4 +1,4 @@
-# rb_fft
+# OouraFFT
 Ooura FFT front-end for Ruby
 
 This is a Ruby's front end that allows to use FFT software of Professor Ooura (Kyoto University).
