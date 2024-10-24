@@ -1,18 +1,21 @@
-# OouraFFT
-## Ooura FFT front-end for Ruby
+# ooura_fft (Ruby gem)
 
-This is a Ruby's front end that allows to use [FFT software of Professor Ooura (Kyoto University)](https://www.kurims.kyoto-u.ac.jp/~ooura/index-j.html).  
+This is a Ruby's front end that allows to use [FFT software of Professor Ooura (Kyoto University)](https://www.kurims.kyoto-u.ac.jp/~ooura/index-j.html).
 
 ## Installation
 
 The software is included in this library. Professor Ooura does not have an installer.  
 
-After downloading, unzip it to any directory, go to the lib directory, and type the following in the terminal to import it.
-```Bash
-$ ruby extconf.rb
-$ make
-$ make install
-$ make distclean
+Install the gem and add to the application's Gemfile by executing:
+
+```bash
+bundle add ooura_fft
+```
+
+If bundler is not being used to manage dependencies, install the gem by executing:
+
+```bash
+gem install ooura_fft
 ```
 
 ## Usage
@@ -65,3 +68,15 @@ It also supports inverse FFT, and works by applying `true` to the keyword argume
 ```
 
 For more information on how to the fourier transform, please refer to the technical book.  
+
+## Contributing
+
+Bug reports and pull requests are welcome on GitHub at https://github.com/tribusonz-2/ooura_fft. This project is intended to be a safe, welcoming space for collaboration, and contributors are expected to adhere to the [code of conduct](https://github.com/tribusonz-2/ooura_fft/blob/master/CODE_OF_CONDUCT.md).
+
+## License
+
+The gem is available as open source under the terms of the [MIT License](https://opensource.org/licenses/MIT).
+
+## Code of Conduct
+
+Everyone interacting in the OouraFft project's codebases, issue trackers, chat rooms and mailing lists is expected to follow the [code of conduct](https://github.com/tribusonz-2/ooura_fft/blob/master/CODE_OF_CONDUCT.md).
