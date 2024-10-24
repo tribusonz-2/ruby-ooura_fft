@@ -5,6 +5,8 @@ This is a Ruby's front end that allows to use [FFT software of Professor Ooura (
 
 ## Installation
 
+The software is included in this library. Professor Ooura does not have an installer.  
+
 After downloading, unzip it to any directory, go to the lib directory, and type the following in the terminal to import it.
 ```Bash
 $ ruby extconf.rb
