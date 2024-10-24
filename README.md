@@ -1,7 +1,9 @@
 # OouraFFT
 ## Ooura FFT front-end for Ruby
 
-This is a Ruby's front end that allows to use FFT software of Professor Ooura (Kyoto University).
+This is a Ruby's front end that allows to use [FFT software of Professor Ooura (Kyoto University)](https://www.kurims.kyoto-u.ac.jp/~ooura/index-j.html).  
+
+## Installation
 
 After downloading, unzip it to any directory, go to the lib directory, and type the following in the terminal to import it.
 ```Bash
