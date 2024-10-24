@@ -10,13 +10,13 @@ Gem::Specification.new do |spec|
 
   spec.summary = "Front-end of OouraFFT for Ruby"
   spec.description = "Front-end of OouraFFT for Ruby."
-  spec.homepage = "https://github.com/tribusonz-2/rb_fft"
+  spec.homepage = "https://github.com/tribusonz-2/ruby-ooura_fft"
   spec.license = "MIT"
   spec.required_ruby_version = ">= 3.0.0"
 
   spec.metadata["homepage_uri"] = spec.homepage
   spec.metadata["source_code_uri"] = spec.homepage
-  spec.metadata["changelog_uri"] = "https://github.com/tribusonz-2/rb_fft/changelog.md"
+  spec.metadata["changelog_uri"] = "https://github.com/tribusonz-2/ruby-ooura_fft/changelog.md"
 
   # Specify which files should be added to the gem when it is released.
   # The `git ls-files -z` loads the files in the RubyGem that have been added into git.
