@@ -71,7 +71,7 @@ For more information on how to the fourier transform, please refer to the techni
 
 ## Contributing
 
-Bug reports and pull requests are welcome on GitHub at https://github.com/tribusonz-2/ooura_fft. This project is intended to be a safe, welcoming space for collaboration, and contributors are expected to adhere to the [code of conduct](https://github.com/tribusonz-2/ooura_fft/blob/master/CODE_OF_CONDUCT.md).
+Bug reports and pull requests are welcome on GitHub at https://github.com/tribusonz-2/ooura_fft. This project is intended to be a safe, welcoming space for collaboration, and contributors are expected to adhere to the [code of conduct](https://github.com/tribusonz-2/ruby-ooura_fft/blob/master/CODE_OF_CONDUCT.md).
 
 ## License
 
@@ -80,3 +80,28 @@ The gem is available as open source under the terms of the [MIT License](https:/
 ## Code of Conduct
 
 Everyone interacting in the OouraFft project's codebases, issue trackers, chat rooms and mailing lists is expected to follow the [code of conduct](https://github.com/tribusonz-2/ooura_fft/blob/master/CODE_OF_CONDUCT.md).
+
+## Provided as a C API
+
+In the future, we plan to provide APIs for gems that are written in C.  
+In the case of OouraFFT, it is as follows:  
+
+```CXX
+RUBY_EXT_EXTERN VALUE rb_mOouraFFT;
+
+VALUE rb_oourafft_cdft(VALUE, int);
+VALUE rb_oourafft_rdft(VALUE, int);
+VALUE rb_oourafft_ddct(VALUE, int);
+VALUE rb_oourafft_ddst(VALUE, int);
+VALUE rb_oourafft_dfct(VALUE, int);
+VALUE rb_oourafft_dfst(VALUE, int);
+```
+
+When install a gem, a directory is created in the installation location along with the .so file. Here is the header file in C.  
+In general, there is `globals.h` which declares the object variables that are entities, and `api.h` which declares the API functions that can be used in C. There is also a header called `ext_extern.h`. This is to let the C side know that object variables are treated as global variables at the C level.  
+To invoke them, include:  
+
+```CXX
+#include <ooura_fft/globals.h>
+#include <ooura_fft/api.h>
+```
