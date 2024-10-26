@@ -4,7 +4,7 @@
 	$author$
 *******************************************************************************/
 #include <ruby.h>
-#define  USE_GLOBAL_VARIABLE
+#define  DEFINE_SYMBOL
 #include "ooura_fft/globals.h"
 #include "missing/missing.h"
 #include "internal/setting/ooura_fft.h"

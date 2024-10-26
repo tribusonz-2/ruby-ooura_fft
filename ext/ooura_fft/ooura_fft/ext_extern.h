@@ -5,7 +5,7 @@
 extern "C" {
 #endif
 
-#ifdef     USE_GLOBAL_VARIABLE
+#ifdef     DEFINE_SYMBOL
 # define   RUBY_EXT_EXTERN
 #else
 # define   RUBY_EXT_EXTERN    extern
