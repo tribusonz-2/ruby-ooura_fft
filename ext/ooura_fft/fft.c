@@ -52,6 +52,14 @@ fft_callback(int argc, VALUE *argv, VALUE (*callback_func)(VALUE, int))
 	return callback_func(ary, invertible);
 }
 
+static inline VALUE
+api_inline(VALUE ary, int inversion, VALUE (*callback_func)(VALUE, int))
+{
+	Check_Type(ary, T_ARRAY);
+	return callback_func(ary, inversion);
+}
+
+/******************************************************************************/
 
 #include "internal/solver/ooura_fft/cdft.h" // fft_cdft_inline()
 /*
@@ -93,6 +101,13 @@ fft_cdft(int argc, VALUE *argv, VALUE unused_obj)
 	return fft_callback(argc, argv, fft_cdft_inline);
 }
 
+VALUE
+rb_oourafft_cdft(VALUE ary, int inversion)
+{
+	return api_inline(ary, inversion, fft_cdft_inline);
+}
+
+/******************************************************************************/
 
 #include "internal/solver/ooura_fft/rdft.h" // fft_rdft_inline()
 /*
@@ -135,6 +150,13 @@ fft_rdft(int argc, VALUE *argv, VALUE unused_obj)
 	return fft_callback(argc, argv, fft_rdft_inline);
 }
 
+VALUE
+rb_oourafft_rdft(VALUE ary, int inversion)
+{
+	return api_inline(ary, inversion, fft_rdft_inline);
+}
+
+/******************************************************************************/
 
 #include "internal/solver/ooura_fft/ddct.h" // fft_ddct_inline()
 /*
@@ -176,6 +198,13 @@ fft_ddct(int argc, VALUE *argv, VALUE unused_obj)
 	return fft_callback(argc, argv, fft_ddct_inline);
 }
 
+VALUE
+rb_oourafft_ddct(VALUE ary, int inversion)
+{
+	return api_inline(ary, inversion, fft_ddct_inline);
+}
+
+/******************************************************************************/
 
 #include "internal/solver/ooura_fft/ddst.h" // fft_ddst_inline()
 /*
@@ -218,6 +247,13 @@ fft_ddst(int argc, VALUE *argv, VALUE unused_obj)
 	return fft_callback(argc, argv, fft_ddst_inline);
 }
 
+VALUE
+rb_oourafft_ddst(VALUE ary, int inversion)
+{
+	return api_inline(ary, inversion, fft_ddst_inline);
+}
+
+/******************************************************************************/
 
 #include "internal/solver/ooura_fft/dfct.h" // fft_dfct_inline()
 /*
@@ -255,6 +291,13 @@ fft_dfct(int argc, VALUE *argv, VALUE unused_obj)
 	return fft_callback(argc, argv, fft_dfct_inline);
 }
 
+VALUE
+rb_oourafft_dfct(VALUE ary, int inversion)
+{
+	return api_inline(ary, inversion, fft_dfct_inline);
+}
+
+/******************************************************************************/
 
 #include "internal/solver/ooura_fft/dfst.h" // fft_dfst_inline()
 /*
@@ -292,6 +335,14 @@ fft_dfst(int argc, VALUE *argv, VALUE unused_obj)
 	return fft_callback(argc, argv, fft_dfst_inline);
 
 }
+
+VALUE
+rb_oourafft_dfst(VALUE ary, int inversion)
+{
+	return api_inline(ary, inversion, fft_dfst_inline);
+}
+
+/******************************************************************************/
 
 static void 
 InitVM_FFTMain(void)
